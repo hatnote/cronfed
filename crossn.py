@@ -153,30 +153,27 @@ def render_rss(rss_items):
     return ET.tostring(rss, encoding='UTF-8')
 
 
-def lastn_emails(mailbox,
-                 n=10,
+def lastn_emails(mb,
+                 n,
                  parser=DEFAULT_SUBJECT_PARSER,
                  delete=True):
-    all_keys = mailbox.keys()
-
     emails = []
-    for key in reversed(all_keys):
-        if parser.match(mailbox[key].get('subject')):
-            emails.append((key, mailbox[key]))
-        if len(emails) == n:
-            break
+    for key in reversed(mb.keys()):
+        if parser.match(mb[key].get('subject')):
+            if len(emails) < n:
+                emails.append(mb[key])
+            elif delete:
+                del mb[key]
 
     return emails
 
 
 def rss_from_emails(path, maximum, delete=True):
     with closing(mbox_readonlydir(path)) as mb:
-        emails = lastn_emails(mb, n=maximum)
+        emails = lastn_emails(mb, maximum, delete=delete)
         rendered = render_rss([RSSItem.fromemail(email)
-                               for _, email in emails])
-        if delete:
-            for key, _ in emails:
-                del mb[key]
+                               for email in emails])
+
     return rendered
 
 
@@ -184,7 +181,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('mbox')
     parser.add_argument('--output', '-o', default=None)
-    parser.add_argument('--maximum', '-m', default=256)
+    parser.add_argument('--maximum', '-m', type=int, default=256)
     parser.add_argument('--save', '-s', default=False,
                         action='store_true')
     args = parser.parse_args()
