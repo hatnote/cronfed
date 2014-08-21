@@ -184,7 +184,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('mbox')
     parser.add_argument('--output', '-o', default=None)
-    parser.add_argument('--maximum', '-m', default=20)
+    parser.add_argument('--maximum', '-m', default=256)
     parser.add_argument('--save', '-s', default=False,
                         action='store_true')
     args = parser.parse_args()
