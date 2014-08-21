@@ -1,9 +1,14 @@
-import os
+import argparse
+from contextlib import closing
+from collections import namedtuple
+import xml.etree.cElementTree as ET
 import mailbox
 import tempfile
+import uuid
+import re
 
 
-class mbox_nodot(mailbox.mbox):
+class mbox_readonlydir(mailbox.mbox):
     """\
     A subclass of mbox suitable for use with mboxs insides a read-only
     /var/mail directory.
@@ -16,7 +21,6 @@ class mbox_nodot(mailbox.mbox):
 
     NB: This can corrupt your mailbox!  Only use this if you know you
     need it.
-
     """
 
     def __init__(self, path, factory=None, create=True, maxmem=1024 * 1024):
@@ -99,3 +103,102 @@ class mbox_nodot(mailbox.mbox):
         self._pending_sync = False
         if self._locked:
             mailbox._lock_file(self._file, dotlock=False)
+
+
+DEFAULT_SUBJECT_PARSER = re.compile(
+    'Cron <(?P<user>[^@].+)@(?P<host>[^>].+)> (?P<command>.*)')
+DEFAULT_SUBJECT_RENDERER = 'Cron <%(user)s@%(host)s> %(command)s'
+
+
+MESSAGE_ID_PARSER = re.compile('<(?P<id>[^@]+)@(?P<host>[^>+]+)>')
+
+
+class RSSItem(namedtuple('RSSItem', ['title', 'description', 'link',
+                                     'lastBuildDate', 'pubDate', 'guid'])):
+
+    @classmethod
+    def fromemail(cls, email, excludes=('command',),
+                  redacted='REDACTED',
+                  parser=DEFAULT_SUBJECT_PARSER,
+                  renderer=DEFAULT_SUBJECT_RENDERER):
+        match = parser.match(email.get('subject'))
+        if not match:
+            raise ValueError("Unparseable subject")
+        parsed = match.groupdict()
+
+        for exclude in excludes:
+            parsed[exclude] = redacted
+        lastBuildDate = pubDate = email.get('date')
+        title = renderer % parsed
+
+        match = MESSAGE_ID_PARSER.match(email.get('message-id'))
+        if not match:
+            guid = uuid.uuid4()
+        else:
+            guid = match.group('id')
+
+        return cls(title=title, description=None, link=None,
+                   lastBuildDate=lastBuildDate, pubDate=pubDate, guid=guid)
+
+
+def render_rss(rss_items):
+    rss = ET.Element('rss', {'version': '2.0'})
+    channel = ET.SubElement(rss, 'channel')
+    for rss_item in rss_items:
+        item = ET.SubElement(channel, 'item')
+        for tag, text in rss_item._asdict().items():
+            elem = ET.SubElement(item, tag)
+            elem.text = text
+
+    return ET.tostring(rss, encoding='UTF-8')
+
+
+def lastn_emails(mailbox,
+                 n=10,
+                 parser=DEFAULT_SUBJECT_PARSER,
+                 delete=True):
+    all_keys = mailbox.keys()
+
+    emails = []
+    for key in reversed(all_keys):
+        if parser.match(mailbox[key].get('subject')):
+            emails.append((key, mailbox[key]))
+        if len(emails) == n:
+            break
+
+    return emails
+
+
+def rss_from_emails(path, maximum, delete=True):
+    with closing(mbox_readonlydir(path)) as mb:
+        emails = lastn_emails(mb, n=maximum)
+        rendered = render_rss([RSSItem.fromemail(email)
+                               for _, email in emails])
+        if delete:
+            for key, _ in emails:
+                del mb[key]
+    return rendered
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('mbox')
+    parser.add_argument('--output', '-o', default=None)
+    parser.add_argument('--maximum', '-m', default=20)
+    parser.add_argument('--save', '-s', default=False,
+                        action='store_true')
+    args = parser.parse_args()
+
+    rendered = rss_from_emails(args.mbox,
+                               args.maximum,
+                               delete=not args.save)
+
+    if args.output:
+        with open(args.output, 'w') as f:
+            f.write(rendered)
+    else:
+        print rendered
+
+
+if __name__ == '__main__':
+    main()
