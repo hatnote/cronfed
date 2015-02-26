@@ -27,11 +27,9 @@ Example
 -------
 
 First, let's look at a basic cron job. This one will fetch our data
-once an hour, on the hour.
+once an hour, on the hour::
 
-```
-0 * * * * /usr/bin/python /home/myuser/project/fetch.py 2>&1 | tee -a /home/myuser/project/logs/fetch.txt
-```
+  0 * * * * /usr/bin/python /home/myuser/project/fetch.py 2>&1 | tee -a /home/myuser/project/logs/fetch.txt
 
 Notice how the output (``stdout`` + ``stderr``) is piped to a log file,
 but using the ``tee`` command. This ensures that the output goes to the
@@ -43,11 +41,9 @@ that if the command generates no output, then ``cron`` **will not send
 an email**, so it's a good idea to emit an error message.
 
 Once we're sure that email is being delivered, we're halfway
-there. Now we just need the actual Cronfed cronjob:
+there. Now we just need the actual Cronfed cronjob::
 
-```
-*/15 * * * * /usr/bin/python -m cronfed --output /var/www/mysite/assets/cronfed.rss /var/mail/myuser 2>&1 | tee -a /home/myuser/project/logs/cronfed.txt
-```
+  */15 * * * * /usr/bin/python -m cronfed --output /var/www/mysite/assets/cronfed.rss /var/mail/myuser 2>&1 | tee -a /home/myuser/project/logs/cronfed.txt
 
 In this example we have the installed ``cronfed`` module regenerating
 our feed every fifteen minutes. This is a pretty quick process in most
