@@ -8,7 +8,7 @@ with your browser_, feedreader_ or other RSS-compatible service (such
 as IFTTT_).
 
 Simply add a cron job to generate the feed, pointing it at a
-web-accessible location (such as a `public_html` directory or your
+web-accessible location (such as a ``public_html`` directory or your
 site's assets directory). Check out the example for some real-world
 Cronfed usage, with an explanation of how cron and Cronfed work
 together.
@@ -33,13 +33,13 @@ once an hour, on the hour.
 0 * * * * /usr/bin/python /home/myuser/project/fetch.py 2>&1 | tee -a /home/myuser/project/logs/fetch.txt
 ```
 
-Notice how the output (`stdout` + `stderr`) is piped to a log file,
-but using the `tee` command. This ensures that the output goes to the
-file as well as `stdout`. `cron` captures that `stdout` and puts it
+Notice how the output (``stdout`` + ``stderr``) is piped to a log file,
+but using the ``tee`` command. This ensures that the output goes to the
+file as well as ``stdout``. ``cron`` captures that ``stdout`` and puts it
 into an email, which then gets sent to the user who owns the job. This
-usually means the email goes to `myuser@localhost`, which on many
-distributions means that it is saved to `/var/mail/myuser`. Do note
-that if the command generates no output, then `cron` **will not send
+usually means the email goes to ``myuser@localhost``, which on many
+distributions means that it is saved to ``/var/mail/myuser``. Do note
+that if the command generates no output, then ``cron`` **will not send
 an email**, so it's a good idea to emit an error message.
 
 Once we're sure that email is being delivered, we're halfway
@@ -49,11 +49,11 @@ there. Now we just need the actual Cronfed cronjob:
 */15 * * * * /usr/bin/python -m cronfed --output /var/www/mysite/assets/cronfed.rss /var/mail/myuser 2>&1 | tee -a /home/myuser/project/logs/cronfed.txt
 ```
 
-In this example we have `cronfed` regenerating our feed every fifteen
-minutes. This is a pretty quick process in most cases, so feel free to
-make it more often. In this case, the output of cronfed itself is
-monitored in exactly the same way as normal cron jobs, with a logfile
-and email to `user@localhost`.
+In this example we have the installed ``cronfed`` module regenerating
+our feed every fifteen minutes. This is a pretty quick process in most
+cases, so feel free to make it more often. In this case, the output of
+cronfed itself is monitored in exactly the same way as normal cron
+jobs, with a logfile and email to ``user@localhost``.
 
 History
 -------
