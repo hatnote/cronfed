@@ -1,32 +1,39 @@
 
 # Credit to Mark Williams for this
 import re
+import sys
 import uuid
 import socket
 import argparse
+import datetime
 from contextlib import closing
 from collections import namedtuple
 import xml.etree.cElementTree as ET
 
+from boltons.tzutils import UTC
 from boltons.mboxutils import mbox_readonlydir
 
+GENERATOR_TEXT = 'cronfed v1.0'
 
-FEED_TITLE = 'Cronfed'
-DEFAULT_LINK = 'http://hatnote.com'
+DEFAULT_LINK = 'http://github.com/hatnote/cronfed'
 DEFAULT_DESC = 'Fresh cron output from cronfed'
 DEFAULT_TITLE = 'Cronfed on %s' % socket.gethostname()
-EXCLUDE_TAGS = set(['lastBuildDate'])
-GUID_URL_TMPL = 'http://hatnote.com/{guid}'
+DEFAULT_GUID_URL_TMPL = 'http://example.com/{guid}'
+# NOTE: would've used isPermalink=false but IFTTT does not like that
+
+DEFAULT_EXCERPT = 16
+DEFAULT_EXCLUDE_EXC = False
+DEFAULT_SAVE = sys.maxint
 
 
-DEFAULT_SUBJECT_PARSER = re.compile(
+DEFAULT_SUBJECT_RE = re.compile(
     'Cron <(?P<user>[^@].+)@(?P<host>[^>].+)> (?P<command>.*)')
-DEFAULT_SUBJECT_RENDERER = 'cron: <%(user)s@%(host)s> %(command)s'
-MESSAGE_ID_PARSER = re.compile('<(?P<id>[^@]+)@(?P<host>[^>+]+)>')
+DEFAULT_SUBJECT_TMPL = 'Cron: <%(user)s@%(host)s> %(command)s'
+MESSAGE_ID_RE = re.compile('<(?P<id>[^@]+)@(?P<host>[^>+]+)>')
 
 
 def find_python_error_type(text):
-    from tbutils import ParsedTB
+    from boltons.tbutils import ParsedTB
     try:
         tb_str = text[text.index('Traceback (most recent'):]
     except ValueError:
@@ -36,45 +43,154 @@ def find_python_error_type(text):
 
 
 BaseRSSItem = namedtuple('RSSItem', ['title', 'description', 'link',
-                                     'lastBuildDate', 'pubDate', 'guid'])
+                                     'pubDate', 'guid'])
+
+
+class CronFeeder(object):
+    def __init__(self, mailbox_path, **kwargs):
+        self.mailbox_path = mailbox_path
+        self.output_path = kwargs.pop('output_path', None)
+        self.save_count = kwargs.pop('save_count', DEFAULT_SAVE)
+        self.feed_title = kwargs.pop('feed_title', DEFAULT_TITLE)
+        self.feed_desc = kwargs.pop('feed_desc', DEFAULT_DESC)
+        self.feed_link = kwargs.pop('feed_link', DEFAULT_LINK)
+        self.guid_url_tmpl = kwargs.pop('guid_url_tmpl', DEFAULT_GUID_URL_TMPL)
+
+        self.subject_re = kwargs.pop('subject_re', DEFAULT_SUBJECT_RE)
+        self.subject_tmpl = kwargs.pop('subject_tmpl', DEFAULT_SUBJECT_TMPL)
+
+        self.excerpt_len = kwargs.pop('excerpt_len', DEFAULT_EXCERPT)
+        self.exclude_exc = kwargs.pop('exclude_exc', DEFAULT_EXCLUDE_EXC)
+        if kwargs:
+            raise TypeError('unexpected keyword arguments: %r' % kwargs.keys())
+
+    def process(self):
+        with closing(mbox_readonlydir(self.mailbox_path)) as mbox:
+            emails = self._process_emails(mbox)
+            rendered = self._render_feed([RSSItem.fromemail(email)
+                                          for email in emails])
+
+        if self.output_path:
+            with open(self.output_path, 'w') as f:
+                f.write(rendered)
+        else:
+            print rendered
+        return
+
+    def _process_emails(self, mbox):
+        ret = []
+        for key, email in reversed(mbox.items()):
+            if self.subject_re.match(email.get('subject')):
+                if len(ret) < self.save_count:
+                    ret.append(email)
+                else:
+                    del mbox[key]
+        return ret
+
+    def _render_feed(self, rss_items):
+        rss = ET.Element('rss', {'version': '2.0'})
+        channel = ET.SubElement(rss, 'channel')
+        title_elem = ET.SubElement(channel, 'title')
+        title_elem.text = self.feed_title
+        desc_elem = ET.SubElement(channel, 'description')
+        desc_elem.text = self.feed_desc
+        link_elem = ET.SubElement(channel, 'link')
+        link_elem.text = self.feed_link
+
+        gen_elem = ET.SubElement(channel, 'generator')
+        gen_elem.text = GENERATOR_TEXT
+
+        lbd_elem = ET.SubElement(channel, 'lastBuildDate')
+        _now = datetime.datetime.now(tz=UTC)
+        lbd_elem.text = _now.strftime('%a, %d %b %Y %H:%M:%S %z')
+
+        for rss_item in rss_items:
+            item = ET.SubElement(channel, 'item')
+            for tag, text in rss_item._asdict().items():
+                if tag == 'link' and text is None:
+                    text = self.feed_link  # TODO: make this configurable?
+                elif tag == 'guid':
+                    text = self.guid_url_tmpl.format(guid=text)
+                elem = ET.SubElement(item, tag)
+                elem.text = text
+        return ET.tostring(rss, encoding='UTF-8')
+
+    @staticmethod
+    def get_argparser():
+        prs = argparse.ArgumentParser()
+        add_arg = prs.add_argument
+        add_arg('mailbox_path',
+                help='path to the mailbox file to process for cron output')
+        add_arg('--output', '-o', default=None,
+                help='where to write the output, defaults to stdout')
+        add_arg('--save', default=DEFAULT_SAVE, type=int,
+                help='the number of cron emails to save, defaults to'
+                ' saving all of them')
+        add_arg('--exclude-exc', default=DEFAULT_EXCLUDE_EXC,
+                action='store_true', help='whether to search for and include'
+                ' Python exception types in the feed')
+        add_arg('--excerpt', default=DEFAULT_EXCERPT, type=int,
+                help='how much cron job output to include, defaults to a small'
+                ' amount, specify 0 to disable excerpting')
+        add_arg('--title', default=DEFAULT_TITLE,
+                help='top-level title for the RSS feed')
+        add_arg('--desc', default=DEFAULT_DESC,
+                help='top-level description for the RSS feed')
+        add_arg('--link', default=DEFAULT_LINK,
+                help='top-level home page URL for the RSS feed')
+        add_arg('--guid-url-tmpl', default=DEFAULT_GUID_URL_TMPL,
+                help='template used to generate individual item links')
+        return prs
+
+    @classmethod
+    def from_args(cls):
+        kwarg_map = {'save': 'save_count',
+                     'output': 'output_path',
+                     'excerpt': 'excerpt_len',
+                     'title': 'feed_title',
+                     'desc': 'feed_desc',
+                     'link': 'feed_link'}
+        prs = cls.get_argparser()
+        kwargs = dict(prs.parse_args()._get_kwargs())
+        for src, dest in kwarg_map.items():
+            kwargs[dest] = kwargs.pop(src)
+        return cls(**kwargs)
 
 
 class RSSItem(BaseRSSItem):
     @classmethod
-    def fromemail(cls, email, excludes=(),
-                  redacted='REDACTED',
-                  parser=DEFAULT_SUBJECT_PARSER,
-                  renderer=DEFAULT_SUBJECT_RENDERER):
+    def fromemail(cls, email,
+                  parser=DEFAULT_SUBJECT_RE,
+                  renderer=DEFAULT_SUBJECT_TMPL,
+                  excerpt=DEFAULT_EXCERPT):
         match = parser.match(email.get('subject'))
         if not match:
             raise ValueError("Unparseable subject")
         parsed = match.groupdict()
 
-        for exclude in excludes:
-            parsed[exclude] = redacted
-        lastBuildDate = pubDate = email.get('date')
+        pubDate = email.get('date')
         title = renderer % parsed
 
-        match = MESSAGE_ID_PARSER.match(email.get('message-id'))
+        match = MESSAGE_ID_RE.match(email.get('message-id'))
         if not match:
-            guid = uuid.uuid4()
+            guid = uuid.uuid4()  # TODO: random's not a good fit here
         else:
             guid = match.group('id')
         body = email.get_payload()
 
-        desc = 'Cron ran %s at %s.' % (parsed['command'], pubDate)
+        desc = 'At %s, Cron ran:\n\n\t%s' % (pubDate, parsed['command'])
         try:
             python_error_type = find_python_error_type(body)
         except:
             python_error_type = None
         if python_error_type:
-            desc += ' Check for a Python exception: %s.' % python_error_type
+            desc += '\n\nPython exception: %s.' % python_error_type
 
         if body:
-            desc += ' Command output:\n\n' + summarize(body, 16)
+            desc += '\n\nCommand output:\n\n\t' + summarize(body, excerpt)
 
         return cls(title=title, description=desc, link=None,
-                   lastBuildDate=lastBuildDate, pubDate=pubDate, guid=guid)
+                   pubDate=pubDate, guid=guid)
 
 
 def summarize(text, length):
@@ -85,79 +201,16 @@ def summarize(text, length):
     len_diff = len(text) - length
     if len_diff <= 0:
         return text
+    elif not length:
+        return '(%s bytes)' % len(text)
     return ''.join([text[:length/2],
                     '... (%s bytes) ...' % len_diff,
                     text[-length/2:]])
 
 
-def render_rss(rss_items):
-    rss = ET.Element('rss', {'version': '2.0'})
-    channel = ET.SubElement(rss, 'channel')
-    title_elem = ET.SubElement(channel, 'title')
-    title_elem.text = DEFAULT_TITLE
-    desc_elem = ET.SubElement(channel, 'description')
-    desc_elem.text = DEFAULT_DESC
-    link_elem = ET.SubElement(channel, 'link')
-    link_elem.text = DEFAULT_LINK
-
-    for rss_item in rss_items:
-        item = ET.SubElement(channel, 'item')
-        for tag, text in rss_item._asdict().items():
-            if tag in EXCLUDE_TAGS:
-                continue
-            if tag == 'link' and text is None:
-                text = DEFAULT_LINK
-            if tag == 'guid':
-                text = GUID_URL_TMPL.format(guid=text)
-                # elem = ET.SubElement(item, tag, {'isPermaLink': 'false'})
-            elem = ET.SubElement(item, tag)
-            elem.text = text
-
-    return ET.tostring(rss, encoding='UTF-8')
-
-
-def lastn_emails(mb,
-                 n,
-                 parser=DEFAULT_SUBJECT_PARSER,
-                 delete=True):
-    emails = []
-    for key in reversed(mb.keys()):
-        if parser.match(mb[key].get('subject')):
-            if len(emails) < n:
-                emails.append(mb[key])
-            elif delete:
-                del mb[key]
-
-    return emails
-
-
-def rss_from_emails(path, maximum, delete=True):
-    with closing(mbox_readonlydir(path)) as mb:
-        emails = lastn_emails(mb, maximum, delete=delete)
-        rendered = render_rss([RSSItem.fromemail(email)
-                               for email in emails])
-
-    return rendered
-
-
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('mbox')
-    parser.add_argument('--output', '-o', default=None)
-    parser.add_argument('--maximum', '-m', type=int, default=256)
-    parser.add_argument('--save', '-s', default=False,
-                        action='store_true')
-    args = parser.parse_args()
-
-    rendered = rss_from_emails(args.mbox,
-                               args.maximum,
-                               delete=not args.save)
-
-    if args.output:
-        with open(args.output, 'w') as f:
-            f.write(rendered)
-    else:
-        print rendered
+    cronfeeder = CronFeeder.from_args()
+    cronfeeder.process()
 
 
 if __name__ == '__main__':
