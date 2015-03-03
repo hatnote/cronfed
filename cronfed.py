@@ -65,8 +65,13 @@ class CronFeeder(object):
     def process(self):
         with closing(mbox_readonlydir(self.mailbox_path)) as mbox:
             emails = self._process_emails(mbox)
-            rendered = self._render_feed([RSSItem.fromemail(email)
-                                          for email in emails])
+            rss_items = []
+            for email in emails:
+                rss_items.append(RSSItem.from_email(email,
+                                                    parser=self.subject_re,
+                                                    renderer=self.subject_tmpl,
+                                                    excerpt=self.excerpt_len))
+            rendered = self._render_feed(rss_items)
 
         if self.output_path:
             with open(self.output_path, 'w') as f:
@@ -162,10 +167,10 @@ BaseRSSItem = namedtuple('RSSItem', ['title', 'description', 'link',
 
 class RSSItem(BaseRSSItem):
     @classmethod
-    def fromemail(cls, email,
-                  parser=DEFAULT_SUBJECT_RE,
-                  renderer=DEFAULT_SUBJECT_TMPL,
-                  excerpt=DEFAULT_EXCERPT):
+    def from_email(cls, email,
+                   parser=DEFAULT_SUBJECT_RE,
+                   renderer=DEFAULT_SUBJECT_TMPL,
+                   excerpt=DEFAULT_EXCERPT):
         body = email.get_payload()
         date = email['date']
         subject = email['subject']
