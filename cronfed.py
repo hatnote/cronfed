@@ -2,8 +2,8 @@
 # Credit to Mark Williams for this
 import re
 import sys
-import uuid
 import socket
+import hashlib
 import argparse
 import datetime
 from contextlib import closing
@@ -18,7 +18,7 @@ GENERATOR_TEXT = 'cronfed v1.0'
 DEFAULT_LINK = 'http://github.com/hatnote/cronfed'
 DEFAULT_DESC = 'Fresh cron output from cronfed'
 DEFAULT_TITLE = 'Cronfed on %s' % socket.gethostname()
-DEFAULT_GUID_URL_TMPL = 'http://example.com/{guid}'
+DEFAULT_GUID_URL_TMPL = None
 # NOTE: would've used isPermalink=false but IFTTT does not like that
 
 DEFAULT_EXCERPT = 16
@@ -42,10 +42,6 @@ def find_python_error_type(text):
     return parsed_tb.exc_type
 
 
-BaseRSSItem = namedtuple('RSSItem', ['title', 'description', 'link',
-                                     'pubDate', 'guid'])
-
-
 class CronFeeder(object):
     def __init__(self, mailbox_path, **kwargs):
         self.mailbox_path = mailbox_path
@@ -55,6 +51,8 @@ class CronFeeder(object):
         self.feed_desc = kwargs.pop('feed_desc', DEFAULT_DESC)
         self.feed_link = kwargs.pop('feed_link', DEFAULT_LINK)
         self.guid_url_tmpl = kwargs.pop('guid_url_tmpl', DEFAULT_GUID_URL_TMPL)
+        if not self.guid_url_tmpl:
+            self.guid_url_tmpl = self.feed_link + '/{guid}'
 
         self.subject_re = kwargs.pop('subject_re', DEFAULT_SUBJECT_RE)
         self.subject_tmpl = kwargs.pop('subject_tmpl', DEFAULT_SUBJECT_TMPL)
@@ -126,18 +124,19 @@ class CronFeeder(object):
         add_arg('--save', default=DEFAULT_SAVE, type=int,
                 help='the number of cron emails to save, defaults to'
                 ' saving all of them')
-        add_arg('--exclude-exc', default=DEFAULT_EXCLUDE_EXC,
-                action='store_true', help='whether to search for and include'
-                ' Python exception types in the feed')
-        add_arg('--excerpt', default=DEFAULT_EXCERPT, type=int,
-                help='how much cron job output to include, defaults to a small'
-                ' amount, specify 0 to disable excerpting')
         add_arg('--title', default=DEFAULT_TITLE,
                 help='top-level title for the RSS feed')
         add_arg('--desc', default=DEFAULT_DESC,
                 help='top-level description for the RSS feed')
         add_arg('--link', default=DEFAULT_LINK,
                 help='top-level home page URL for the RSS feed')
+
+        add_arg('--exclude-exc', default=DEFAULT_EXCLUDE_EXC,
+                action='store_true', help='whether to search for and include'
+                ' Python exception types in the feed')
+        add_arg('--excerpt', default=DEFAULT_EXCERPT, type=int,
+                help='how much cron job output to include, defaults to a small'
+                ' amount, specify 0 to disable excerpting')
         add_arg('--guid-url-tmpl', default=DEFAULT_GUID_URL_TMPL,
                 help='template used to generate individual item links')
         return prs
@@ -157,28 +156,33 @@ class CronFeeder(object):
         return cls(**kwargs)
 
 
+BaseRSSItem = namedtuple('RSSItem', ['title', 'description', 'link',
+                                     'pubDate', 'guid'])
+
+
 class RSSItem(BaseRSSItem):
     @classmethod
     def fromemail(cls, email,
                   parser=DEFAULT_SUBJECT_RE,
                   renderer=DEFAULT_SUBJECT_TMPL,
                   excerpt=DEFAULT_EXCERPT):
-        match = parser.match(email.get('subject'))
-        if not match:
-            raise ValueError("Unparseable subject")
-        parsed = match.groupdict()
-
-        pubDate = email.get('date')
-        title = renderer % parsed
-
-        match = MESSAGE_ID_RE.match(email.get('message-id'))
-        if not match:
-            guid = uuid.uuid4()  # TODO: random's not a good fit here
-        else:
-            guid = match.group('id')
         body = email.get_payload()
+        date = email['date']
+        subject = email['subject']
 
-        desc = 'At %s, Cron ran:\n\n\t%s' % (pubDate, parsed['command'])
+        match = parser.match(subject)
+        if not match:
+            raise ValueError("Unparseable subject")  # TODO: handle this better
+        subject_dict = match.groupdict()
+        title = renderer % subject_dict
+
+        match = MESSAGE_ID_RE.match(email.get('message-id', ''))
+        if match:
+            guid = match.group('id')
+        else:
+            guid = hashlib.sha224(date + subject + body).hexdigest()
+
+        desc = 'At %s, Cron ran:\n\n\t%s' % (date, subject_dict['command'])
         try:
             python_error_type = find_python_error_type(body)
         except:
@@ -190,7 +194,7 @@ class RSSItem(BaseRSSItem):
             desc += '\n\nCommand output:\n\n\t' + summarize(body, excerpt)
 
         return cls(title=title, description=desc, link=None,
-                   pubDate=pubDate, guid=guid)
+                   pubDate=date, guid=guid)
 
 
 def summarize(text, length):
