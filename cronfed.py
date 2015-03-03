@@ -177,7 +177,7 @@ class RSSItem(BaseRSSItem):
 
         match = parser.match(subject)
         if not match:
-            raise ValueError("Unparseable subject")  # TODO: handle this better
+            raise ValueError("Unparseable subject")
         subject_dict = match.groupdict()
         title = renderer % subject_dict
 

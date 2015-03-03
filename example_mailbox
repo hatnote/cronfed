@@ -1,0 +1,69 @@
+From user@example.com  Fri Feb 27 06:21:03 2015
+Return-Path: <user@example.com>
+Received: from example.com (localhost.localdomain [127.0.0.1])
+	by example.com (8.14.3/8.14.3/Debian-9.4) with ESMTP id t1RBL3ih022545
+	for <user@example.com>; Fri, 27 Feb 2015 06:21:03 -0500
+Received: (from user@localhost)
+	by example.com (8.14.3/8.14.3/Submit) id t1RBL3RP022544
+	for user; Fri, 27 Feb 2015 06:21:03 -0500
+Date: Fri, 27 Feb 2015 06:21:03 -0500
+Message-Id: <201502271121.t1RBL3RP022544@example.com>
+From: root@example.com (Cron Daemon)
+To: user@example.com
+Subject: Cron <user@example.com> $PYTHON_BIN /home/user/script.py --lang da 2>&1 | tee -a /home/user/logs/da.txt
+Content-Type: text/plain; charset=ANSI_X3.4-1968
+X-Cron-Env: <PYTHON_BIN=/home/user/virtualenvs/project/bin/python>
+{u'complete': True}
+Some more fun da output for our precious example.
+
+From user@example.com  Fri Feb 27 06:21:03 2015
+Return-Path: <user@example.com>
+Received: from example.com (localhost.localdomain [127.0.0.1])
+	by example.com (8.14.3/8.14.3/Debian-9.4) with ESMTP id t1RBL3ed022549
+	for <user@example.com>; Fri, 27 Feb 2015 06:21:03 -0500
+Received: (from user@localhost)
+	by example.com (8.14.3/8.14.3/Submit) id t1RBL3Uf022546
+	for user; Fri, 27 Feb 2015 06:21:03 -0500
+Date: Fri, 27 Feb 2015 06:21:03 -0500
+Message-Id: <201502271121.t1RBL3Uf022546@example.com>
+From: root@example.com (Cron Daemon)
+To: user@example.com
+Subject: Cron <user@example.com> $PYTHON_BIN /home/user/script.py --lang it 2>&1 | tee -a /home/user/logs/it.txt
+Content-Type: text/plain; charset=ANSI_X3.4-196
+X-Cron-Env: <PYTHON_BIN=/home/user/virtualenvs/project/bin/python>
+{u'complete': True}
+Some more fun it output for our precious example.
+
+From friend@example.com  Fri Feb 27 06:22:02 2015
+Return-Path: <user@example.com>
+Received: from example.com (localhost.localdomain [127.0.0.1])
+	by example.com (8.14.3/8.14.3/Debian-9.4) with ESMTP id t1RBM23c022565
+	for <user@example.com>; Fri, 27 Feb 2015 06:22:02 -0500
+Received: (from user@localhost)
+	by example.com (8.14.3/8.14.3/Submit) id t1RBM2RK022564
+	for user; Fri, 27 Feb 2015 06:22:02 -0500
+Date: Fri, 27 Feb 2015 06:22:02 -0500
+Message-Id: <201502271122.t1RBM2RK022564@example.com>
+From: friend@example.com (Your friend)
+To: user@example.com
+Subject: Cron? What cron?
+Content-Type: text/plain; charset=ANSI_X3.4-1968
+Some non-cron content, because cron isn't everything
+
+From user@example.com  Fri Feb 27 06:22:02 2015
+Return-Path: <user@example.com>
+Received: from example.com (localhost.localdomain [127.0.0.1])
+	by example.com (8.14.3/8.14.3/Debian-9.4) with ESMTP id t1RBM23c022565
+	for <user@example.com>; Fri, 27 Feb 2015 06:22:02 -0500
+Received: (from user@localhost)
+	by example.com (8.14.3/8.14.3/Submit) id t1RBM2RK022564
+	for user; Fri, 27 Feb 2015 06:22:02 -0500
+Date: Fri, 27 Feb 2015 06:22:02 -0500
+Message-Id: <201502271122.t1RBM2RK022564@example.com>
+From: root@example.com (Cron Daemon)
+To: user@example.com
+Subject: Cron <user@example.com> $PYTHON_BIN /home/user/script.py --lang ca 2>&1 | tee -a /home/user/logs/ca.txt
+Content-Type: text/plain; charset=ANSI_X3.4-1968
+X-Cron-Env: <PYTHON_BIN=/home/user/virtualenvs/project/bin/python>
+{u'complete': True}
+Some more fun ca output for our precious example.
