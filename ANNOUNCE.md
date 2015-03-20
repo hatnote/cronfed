@@ -32,4 +32,6 @@ _If only all solutions were this easy and consequence-free._
 We use [Cronfed](github.com/hatnote/cronfed) for Hatnote’s [Recent
 Changes Map](rcmap.hatnote.com) and [Weeklypedia](weekly.hatnote.com)
 (which just turned 1! [You should sign up](weekly.hatnote.com), learn
-about Wikipedia, and experience the reliability firsthand!)
+about Wikipedia, and experience the reliability
+firsthand!). Predictably, everyone seems satisfied with a simple tool
+that does one job well.
