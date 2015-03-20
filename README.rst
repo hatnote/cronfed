@@ -3,11 +3,10 @@ Cronfed
 
 .. image:: https://farm9.staticflickr.com/8144/7544169948_8abb2bb2f3_m_d.jpg
 
-**Cronfed** is a tool for monitoring basic batch jobs, or any other
-cron-based scheduled commands. It achieves this by parsing a given
-mailbox and turning it into an RSS feed, which can then be monitored
-with your browser_, feedreader_ or other RSS-compatible service (such
-as IFTTT_).
+**Cronfed** monitors basic batch jobs, or any other cron-based
+scheduled commands by parsing a given mailbox and turning it into an
+RSS feed. The feed can in turn be monitored with your browser_,
+feedreader_ or other RSS-compatible service (such as IFTTT_).
 
 Simply add a cron job to generate the feed, pointing it at a
 web-accessible location (such as a ``public_html`` directory or your
@@ -15,13 +14,14 @@ site's assets directory). Check out the example for some real-world
 Cronfed usage, with an explanation of how cron and Cronfed work
 together.
 
-Cronfed is aimed at providing a basic threshold of monitoring without
-complex automation or dependencies, making it suitable for smaller
-projects which otherwise might go without any monitoring at all. It's
-so easy to set up and use on the standard Linux/BSD machine that
-there's no reason to not use it from Day 1. While Cronfed makes
-attempts at limiting the amount of information externalized, it is not
-recommended for jobs with extremely-sensitive information.
+Cronfed is **Minimum Viable Monitoring**, aimed at providing a basic
+threshold of monitoring without complex automation or dependencies.
+It's targeted at smaller projects which otherwise might go without any
+monitoring at all. It's so easy to set up and use on the standard
+Linux/BSD machine that there's no reason to not use it from
+Day 1. While Cronfed makes attempts at limiting the amount of
+information externalized, it is not recommended for jobs with
+extremely-sensitive information.
 
 *"Cronfed: It's the least you could do!"*
 
@@ -72,6 +72,9 @@ Cronfed was created for `Hatnote`_ to monitor the periodic data
 refreshes necessary to generate `The Weeklypedia`_. See those cron
 jobs and more in the `Weeklypedia crontab`_.
 
+* Copyright: (c) 2015 by `Mark Williams`_ and `Mahmoud Hashemi`_
+* License: BSD, see LICENSE for more details.
+
 
 .. _browser: https://www.mozilla.org/en-US/firefox/new/
 .. _feedreader: https://theoldreader.com/
@@ -79,6 +82,5 @@ jobs and more in the `Weeklypedia crontab`_.
 .. _Hatnote: http://hatnote.com
 .. _The Weeklypedia: http://weekly.hatnote.com
 .. _Weeklypedia crontab: https://github.com/hatnote/weeklypedia/blob/master/weeklypedia/crontab
-
-* Copyright: (c) 2015 by Mark Williams and Mahmoud Hashemi
-* License: BSD, see LICENSE for more details.
+.. _Mark Williams: https://github.com/markrwilliams/
+.. _Mahmoud Hashemi: https://github.com/mahmoud/
