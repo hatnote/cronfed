@@ -11,7 +11,7 @@ from setuptools import setup
 
 
 __author__ = 'Mahmoud Hashemi and Mark Williams'
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 __contact__ = 'mahmoudrhashemi@gmail.com'
 __url__ = 'https://github.com/hatnote/cronfed'
 __license__ = 'BSD'
@@ -29,7 +29,7 @@ setup(name='cronfed',
       author=__author__,
       author_email=__contact__,
       url=__url__,
-      modules=['cronfed'],
+      py_modules=['cronfed'],
       install_requires=['boltons==0.4.1'],
       zip_safe=True,
       license=__license__,
