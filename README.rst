@@ -1,7 +1,9 @@
 Cronfed
 =======
 
-Cronfed is a tool for monitoring basic batch jobs, or any other
+.. image:: https://farm9.staticflickr.com/8144/7544169948_8abb2bb2f3_m_d.jpg
+
+**Cronfed** is a tool for monitoring basic batch jobs, or any other
 cron-based scheduled commands. It achieves this by parsing a given
 mailbox and turning it into an RSS feed, which can then be monitored
 with your browser_, feedreader_ or other RSS-compatible service (such
@@ -22,6 +24,18 @@ attempts at limiting the amount of information externalized, it is not
 recommended for jobs with extremely-sensitive information.
 
 *"Cronfed: It's the least you could do!"*
+
+Installation
+------------
+
+Cronfed is pure Python, has no system library dependencies, and should
+work wonders on any POSIX machine with a functioning cron daemon and
+local mail system::
+
+  pip install cronfed
+
+Run ``python -m cronfed --help`` to see options, or read on for a
+usage example.
 
 Example
 -------
@@ -54,8 +68,9 @@ jobs, with a logfile and email to ``user@localhost``.
 History
 -------
 
-Cronfed was created for `Hatnote`_ to monitor the periodic data refreshes
-necessary to generate `The Weeklypedia`_.
+Cronfed was created for `Hatnote`_ to monitor the periodic data
+refreshes necessary to generate `The Weeklypedia`_. See those cron
+jobs and more in the `Weeklypedia crontab`_.
 
 
 .. _browser: https://www.mozilla.org/en-US/firefox/new/
@@ -63,6 +78,7 @@ necessary to generate `The Weeklypedia`_.
 .. _IFTTT: https://ifttt.com/
 .. _Hatnote: http://hatnote.com
 .. _The Weeklypedia: http://weekly.hatnote.com
+.. _Weeklypedia crontab: https://github.com/hatnote/weeklypedia/blob/master/weeklypedia/crontab
 
 * Copyright: (c) 2015 by Mark Williams and Mahmoud Hashemi
 * License: BSD, see LICENSE for more details.
