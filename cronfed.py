@@ -18,6 +18,7 @@ GENERATOR_TEXT = 'cronfed v1.0'
 DEFAULT_LINK = 'http://github.com/hatnote/cronfed'
 DEFAULT_DESC = 'Fresh cron output from cronfed'
 DEFAULT_TITLE = 'Cronfed on %s' % socket.gethostname()
+DEFAULT_TTL = '30'  # time to live (how often to recheck in mins)
 DEFAULT_GUID_URL_TMPL = None
 # NOTE: would've used isPermalink=false but IFTTT does not like that
 
@@ -50,6 +51,7 @@ class CronFeeder(object):
         self.feed_title = kwargs.pop('feed_title', DEFAULT_TITLE)
         self.feed_desc = kwargs.pop('feed_desc', DEFAULT_DESC)
         self.feed_link = kwargs.pop('feed_link', DEFAULT_LINK)
+        self.feed_ttl = kwargs.pop('feed_ttl', DEFAULT_TTL)
         self.guid_url_tmpl = kwargs.pop('guid_url_tmpl', DEFAULT_GUID_URL_TMPL)
         if not self.guid_url_tmpl:
             self.guid_url_tmpl = self.feed_link + '/{guid}'
@@ -99,6 +101,8 @@ class CronFeeder(object):
         desc_elem.text = self.feed_desc
         link_elem = ET.SubElement(channel, 'link')
         link_elem.text = self.feed_link
+        ttl_elem = ET.SubElement(channel, 'ttl')
+        ttl_elem.text = self.feed_ttl
 
         gen_elem = ET.SubElement(channel, 'generator')
         gen_elem.text = GENERATOR_TEXT
@@ -135,6 +139,8 @@ class CronFeeder(object):
                 help='top-level description for the RSS feed')
         add_arg('--link', default=DEFAULT_LINK,
                 help='top-level home page URL for the RSS feed')
+        add_arg('--ttl', default=DEFAULT_TTL,
+                help='recommended minutes between feed reader update checks')
 
         add_arg('--exclude-exc', default=DEFAULT_EXCLUDE_EXC,
                 action='store_true', help='whether to search for and include'
@@ -153,7 +159,8 @@ class CronFeeder(object):
                      'excerpt': 'excerpt_len',
                      'title': 'feed_title',
                      'desc': 'feed_desc',
-                     'link': 'feed_link'}
+                     'link': 'feed_link',
+                     'ttl': 'feed_ttl'}
         prs = cls.get_argparser()
         kwargs = dict(prs.parse_args()._get_kwargs())
         for src, dest in kwarg_map.items():
